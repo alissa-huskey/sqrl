@@ -3,11 +3,11 @@
 **Non thread safe** fork of [squirrel](http://github.com/lann/squirrel). The same handy fluffy helper, but with extra letters removed :)
 
 ```go
-import "github.com/elgris/sqrl"
+import "github.com/alissa-huskey/sqrl"
 ```
 
-[![GoDoc](https://godoc.org/github.com/elgris/sqrl?status.svg)](https://godoc.org/github.com/elgris/sqrl)
-[![Build Status](https://travis-ci.org/elgris/sqrl.svg?branch=master)](https://travis-ci.org/elgris/sqrl)
+[![GoDoc](https://godoc.org/github.com/alissa-huskey/sqrl?status.svg)](https://godoc.org/github.com/alissa-huskey/sqrl)
+[![Build Status](https://travis-ci.org/alissa-huskey/sqrl.svg?branch=master)](https://travis-ci.org/alissa-huskey/sqrl)
 
 **Requires Go 1.8 and higher**
 
@@ -18,11 +18,11 @@ import "github.com/elgris/sqrl"
 
 ## Why to make good squirrel lighter?
 
-Ask [benchmarks](https://github.com/elgris/golang-sql-builder-benchmark) about that ;). Squirrel is good, reliable and thread-safe with it's immutable query builder. Although immutability is nice, it's resource consuming and sometimes redundant. As authors of `dbr` say: "100% of our application code was written without the need for this".
+Ask [benchmarks](https://github.com/alissa-huskey/golang-sql-builder-benchmark) about that ;). Squirrel is good, reliable and thread-safe with it's immutable query builder. Although immutability is nice, it's resource consuming and sometimes redundant. As authors of `dbr` say: "100% of our application code was written without the need for this".
 
 ## Why not to use dbr then?
 
-Although, `dbr`'s query builder is proven to be much [faster than squirrel](https://github.com/tyler-smith/golang-sql-benchmark) and even faster than [sqrl](https://github.com/elgris/golang-sql-builder-benchmark), it doesn't have all syntax sugar. Especially I miss support of JOINs, subqueries and aliases.
+Although, `dbr`'s query builder is proven to be much [faster than squirrel](https://github.com/tyler-smith/golang-sql-benchmark) and even faster than [sqrl](https://github.com/alissa-huskey/golang-sql-builder-benchmark), it doesn't have all syntax sugar. Especially I miss support of JOINs, subqueries and aliases.
 
 ## Usage
 
@@ -32,7 +32,7 @@ Although, `dbr`'s query builder is proven to be much [faster than squirrel](http
 It's very easy to switch between original squirrel and sqrl, because there is no change in interface:
 
 ```go
-import sq "github.com/elgris/sqrl" // you can easily use github.com/lann/squirrel here
+import sq "github.com/alissa-huskey/sqrl" // you can easily use github.com/lann/squirrel here
 
 users := sq.Select("*").From("users").Join("emails USING (email_id)")
 
@@ -92,7 +92,7 @@ sql, args, err := sq.Delete("a1").
 
 ### PostgreSQL-specific functions
 
-Package [pg](https://godoc.org/github.com/elgris/sqrl/pg) contains PostgreSQL specific operators.
+Package [pg](https://godoc.org/github.com/alissa-huskey/sqrl/pg) contains PostgreSQL specific operators.
 
 #### [Update from](https://www.postgresql.org/docs/current/static/sql-update.html)
 

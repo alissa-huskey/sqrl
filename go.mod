@@ -1,4 +1,4 @@
-module github.com/elgris/sqrl
+module github.com/alissa-huskey/sqrl
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

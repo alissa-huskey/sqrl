@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/elgris/sqrl"
-	"github.com/elgris/sqrl/pg"
+	"github.com/alissa-huskey/sqrl"
+	"github.com/alissa-huskey/sqrl/pg"
 	"github.com/stretchr/testify/assert"
 )
 
