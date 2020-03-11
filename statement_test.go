@@ -23,6 +23,14 @@ func TestStatementBuilderPlaceholderFormat(t *testing.T) {
 	assert.Equal(t, "SELECT test WHERE x = $1", db.LastExecSql)
 }
 
+func TestStatementBuilderEmptyValuesOption(t *testing.T) {
+	sb := StatementBuilder.AllowEmptyVals()
+	assert.True(t, sb.emptyok)
+
+	_, _, e := sb.Insert("t").Columns("a", "b", "c").ToSql()
+	assert.Nil(t, e)
+}
+
 func TestRunWithDB(t *testing.T) {
 	db := &sql.DB{}
 	assert.NotPanics(t, func() {

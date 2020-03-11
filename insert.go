@@ -91,13 +91,19 @@ func (b *InsertBuilder) PlaceholderFormat(f PlaceholderFormat) *InsertBuilder {
 	return b
 }
 
+// emptyok allows empty b.values
+func (b *InsertBuilder) AllowEmptyVals() *InsertBuilder {
+	(*b).emptyok = true
+	return b
+}
+
 // ToSql builds the query into a SQL string and bound args.
 func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 	if len(b.into) == 0 {
 		err = fmt.Errorf("insert statements must specify a table")
 		return
 	}
-	if len(b.values) == 0 && b.iselect == nil {
+	if !b.emptyok && len(b.values) == 0 && b.iselect == nil {
 		err = fmt.Errorf("insert statements must have at least one set of values or select clause")
 		return
 	}
@@ -152,7 +158,7 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 }
 
 func (b *InsertBuilder) appendValuesToSQL(w io.Writer, args []interface{}) ([]interface{}, error) {
-	if len(b.values) == 0 {
+	if !b.emptyok && len(b.values) == 0 {
 		return args, errors.New("values for insert statements are not set")
 	}
 

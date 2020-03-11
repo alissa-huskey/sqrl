@@ -48,6 +48,14 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
 }
 
+func TestInsertAllowEmptyVals(t *testing.T) {
+	_, _, e := Insert("t").ToSql()
+	assert.Error(t, e)
+
+	_, _, e = Insert("t").AllowEmptyVals().ToSql()
+	assert.Nil(t, e)
+}
+
 func TestInsertBuilderReturning(t *testing.T) {
 	b := Insert("a").
 		Columns("foo").

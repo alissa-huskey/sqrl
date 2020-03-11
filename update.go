@@ -13,6 +13,7 @@ import (
 type setClause struct {
 	column string
 	value  interface{}
+	isset  bool
 }
 
 // Builder
@@ -104,6 +105,12 @@ func (b *UpdateBuilder) PlaceholderFormat(f PlaceholderFormat) *UpdateBuilder {
 	return b
 }
 
+// emptyok allows empty setClause.value
+func (b *UpdateBuilder) AllowEmptyVals() *UpdateBuilder {
+	(*b).emptyok = true
+	return b
+}
+
 // ToSql builds the query into a SQL string and bound args.
 func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 	if len(b.table) == 0 {
@@ -129,6 +136,10 @@ func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 	setSqls := make([]string, len(b.setClauses))
 	for i, setClause := range b.setClauses {
 		var valSql string
+		if setClause.column == "" {
+			err = fmt.Errorf("missing column name")
+			return
+		}
 		switch typedVal := setClause.value.(type) {
 		case Sqlizer:
 			var valArgs []interface{}
@@ -139,7 +150,12 @@ func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 			args = append(args, valArgs...)
 		default:
 			valSql = "?"
-			args = append(args, typedVal)
+			if setClause.isset {
+				args = append(args, typedVal)
+			} else if !b.emptyok {
+				err = fmt.Errorf(fmt.Sprintf("not enough arguments to Set(%s)", setClause.column))
+				return
+			}
 		}
 		setSqls[i] = fmt.Sprintf("%s = %s", setClause.column, valSql)
 	}
@@ -207,9 +223,35 @@ func (b *UpdateBuilder) Table(table string) *UpdateBuilder {
 	return b
 }
 
+// Set adds setClause for each column with EmptyVal{}
+func (b *UpdateBuilder) Columns(columns ...string) *UpdateBuilder {
+	for _, c := range columns {
+		b.setClauses = append(b.setClauses, setClause{column: c})
+	}
+	return b
+}
+
+// Values adds a single row's values to the query.
+func (b *UpdateBuilder) Values(values ...interface{}) *UpdateBuilder {
+	for i, v := range values {
+		if i >= len(b.setClauses) {
+			b.setClauses = append(b.setClauses, setClause{value: v, isset: true})
+			return b
+		}
+		b.setClauses[i].value = v
+		b.setClauses[i].isset = true
+	}
+	return b
+}
+
 // Set adds SET clauses to the query.
-func (b *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
-	b.setClauses = append(b.setClauses, setClause{column: column, value: value})
+func (b *UpdateBuilder) Set(column string, value ...interface{}) *UpdateBuilder {
+	c := setClause{column: column}
+	if len(value) > 0 {
+		c.value = value[0]
+		c.isset = true
+	}
+	b.setClauses = append(b.setClauses, c)
 	return b
 }
 

@@ -3,6 +3,7 @@ package sqrl
 // StatementBuilderType is the type of StatementBuilder.
 type StatementBuilderType struct {
 	placeholderFormat PlaceholderFormat
+	emptyok           bool
 	runWith           BaseRunner
 }
 
@@ -40,7 +41,7 @@ func (b StatementBuilderType) RunWith(runner BaseRunner) StatementBuilderType {
 
 // StatementBuilder is a basic statement builder, holds global configuration options
 // like placeholder format or SQL runner
-var StatementBuilder = StatementBuilderType{placeholderFormat: Question}
+var StatementBuilder = StatementBuilderType{placeholderFormat: Question, emptyok: false}
 
 // Select returns a new SelectBuilder, optionally setting some result columns.
 //
@@ -68,6 +69,12 @@ func Update(table string) *UpdateBuilder {
 // See DeleteBuilder.Table.
 func Delete(what ...string) *DeleteBuilder {
 	return StatementBuilder.Delete(what...)
+}
+
+// emptyok allows empty b.values for insert or update child builders
+func (b StatementBuilderType) AllowEmptyVals() StatementBuilderType {
+	b.emptyok = true
+	return b
 }
 
 // Case returns a new CaseBuilder

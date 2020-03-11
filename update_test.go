@@ -102,6 +102,51 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
 }
 
+func TestUpdateBuilderMultipleSets(t *testing.T) {
+	s, a, _ := Update("t").Set("a", 1).Set("b", 2).ToSql()
+
+	assert.Equal(t, "UPDATE t SET a = ?, b = ?", s)
+	assert.Equal(t, []interface{}{1, 2}, a)
+}
+
+func TestUpdateAllowEmptyVals(t *testing.T) {
+	_, _, e := Update("t").Set("a").ToSql()
+	assert.Error(t, e)
+
+	_, _, e = Update("t").Set("", 3).ToSql()
+	assert.Error(t, e)
+
+	s, _, e := Update("t").Set("a").AllowEmptyVals().ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, "UPDATE t SET a = ?", s)
+}
+
+func TestUpdateColumnsValues(t *testing.T) {
+	s, a, e := Update("t").Columns("a", "b", "c").Values(1, 2, 3).ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, []interface{}{1, 2, 3}, a)
+	assert.Equal(t, "UPDATE t SET a = ?, b = ?, c = ?", s)
+
+	_, _, e = Update("t").Columns("a", "b", "c").Values(1, 2).ToSql()
+	assert.Error(t, e)
+
+	_, _, e = Update("t").Columns("a", "b", "c").Values(1, 2, 3, 4).ToSql()
+	assert.Error(t, e)
+
+	_, _, e = Update("t").Values(1, 2, 3, 4).ToSql()
+	assert.Error(t, e)
+
+	_, _, e = Update("t").Columns("a", "b", "c").ToSql()
+	assert.Error(t, e)
+
+	s, _, e = Update("t").AllowEmptyVals().Values(1, 2, 3).ToSql()
+	assert.Error(t, e)
+
+	s, _, e = Update("t").AllowEmptyVals().Columns("a", "b", "c").ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, "UPDATE t SET a = ?, b = ?, c = ?", s)
+}
+
 func TestUpdateBuilderRunners(t *testing.T) {
 	db := &DBStub{}
 	b := Update("test").Set("x", 1).Suffix("RETURNING y").RunWith(db)
