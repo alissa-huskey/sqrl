@@ -127,7 +127,9 @@ func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 
 	sql.WriteString(" SET ")
 	setSqls := make([]string, len(b.setClauses))
+	columns := make([]string, len(b.setClauses))
 	for i, setClause := range b.setClauses {
+		columns[i] = setClause.column
 		var valSql string
 		switch typedVal := setClause.value.(type) {
 		case Sqlizer:
@@ -189,7 +191,7 @@ func (b *UpdateBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
 	}
 
-	sqlStr, err = b.placeholderFormat.ReplacePlaceholders(sql.String())
+	sqlStr, err = b.placeholderFormat.ReplacePlaceholders(sql.String(), columns)
 	return
 }
 

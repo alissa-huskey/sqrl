@@ -30,6 +30,18 @@ func TestInsertBuilderToSql(t *testing.T) {
 	assert.Equal(t, expectedArgs, args)
 }
 
+func TestInsertNamedValues(t *testing.T) {
+	b := Insert("t").
+		Columns("a", "b").
+		NamedValues(1, 1)
+
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+
+	assert.Equal(t, "INSERT INTO t (a,b) VALUES (:a,:b)", sql)
+	assert.Equal(t, []interface{}{1, 1}, args)
+}
+
 func TestInsertBuilderToSqlErr(t *testing.T) {
 	_, _, err := Insert("").Values(1).ToSql()
 	assert.Error(t, err)
@@ -41,11 +53,21 @@ func TestInsertBuilderToSqlErr(t *testing.T) {
 func TestInsertBuilderPlaceholders(t *testing.T) {
 	b := Insert("test").Values(1, 2)
 
-	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
+	sql, _, e := b.PlaceholderFormat(Question).ToSql()
+	assert.Nil(t, e)
 	assert.Equal(t, "INSERT INTO test VALUES (?,?)", sql)
 
-	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
+	sql, _, e = b.PlaceholderFormat(Dollar).ToSql()
+	assert.Nil(t, e)
 	assert.Equal(t, "INSERT INTO test VALUES ($1,$2)", sql)
+
+	sql, _, e = b.PlaceholderFormat(Named).ToSql()
+	assert.NotNil(t, e)
+
+	b = Insert("test").Columns("a", "b").Values(1, 2)
+	sql, _, e = b.PlaceholderFormat(Named).ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, "INSERT INTO test (a,b) VALUES (:a,:b)", sql)
 }
 
 func TestInsertBuilderReturning(t *testing.T) {
