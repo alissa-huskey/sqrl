@@ -153,7 +153,7 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		args, _ = b.suffixes.AppendToSql(sql, " ", args)
 	}
 
-	sqlStr, err = b.placeholderFormat.ReplacePlaceholders(sql.String())
+	sqlStr, err = b.placeholderFormat.ReplacePlaceholders(sql.String(), b.columns)
 	return
 }
 
@@ -242,6 +242,12 @@ func (b *InsertBuilder) Columns(columns ...string) *InsertBuilder {
 func (b *InsertBuilder) Values(values ...interface{}) *InsertBuilder {
 	b.values = append(b.values, values)
 	return b
+}
+
+// NamedValues sets placeHolderFormat to Named and adds a single row's values to the query.
+func (b *InsertBuilder) NamedValues(values ...interface{}) *InsertBuilder {
+	b.placeholderFormat = Named
+	return b.Values(values...)
 }
 
 // Returning adds columns to RETURNING clause of the query

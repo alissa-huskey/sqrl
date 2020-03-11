@@ -98,6 +98,9 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
 	assert.Equal(t, "UPDATE test SET x = ?, y = ?", sql)
 
+	sql, _, _ = b.PlaceholderFormat(Named).ToSql()
+	assert.Equal(t, "UPDATE test SET x = :x, y = :y", sql)
+
 	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
 }
