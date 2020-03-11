@@ -2,6 +2,7 @@ package sqrl
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 // ReplacePlaceholders takes a SQL statement and replaces each question mark
 // placeholder with a (possibly different) SQL placeholder.
 type PlaceholderFormat interface {
-	ReplacePlaceholders(sql string) (string, error)
+	ReplacePlaceholders(sql string, columns ...[]string) (string, error)
 }
 
 var (
@@ -22,19 +23,35 @@ var (
 	// Dollar is a PlaceholderFormat instance that replaces placeholders with
 	// dollar-prefixed positional placeholders (e.g. $1, $2, $3).
 	Dollar = dollarFormat{}
+
+	// Named is a PlaceholderFormat instance that replaces ?<colname> with
+	// colon-prefixed named placeholders (e.g. :col_a, :col_b, :col_c).
+	Named = namedFormat{}
 )
 
 type questionFormat struct{}
 
-func (_ questionFormat) ReplacePlaceholders(sql string) (string, error) {
+func (_ questionFormat) ReplacePlaceholders(sql string, _ ...[]string) (string, error) {
 	return sql, nil
 }
 
 type dollarFormat struct{}
 
-func (_ dollarFormat) ReplacePlaceholders(sql string) (string, error) {
+func (_ dollarFormat) ReplacePlaceholders(sql string, _ ...[]string) (string, error) {
 	return replacePlaceholders(sql, func(buf *bytes.Buffer, i int) error {
 		fmt.Fprintf(buf, "$%d", i)
+		return nil
+	})
+}
+
+type namedFormat struct{}
+
+func (_ namedFormat) ReplacePlaceholders(sql string, args ...[]string) (string, error) {
+	return replacePlaceholders(sql, func(buf *bytes.Buffer, i int) error {
+		if len(args) == 0 || i-1 >= len(args[0]) {
+			return errors.New("unable to determine placeholder name")
+		}
+		fmt.Fprintf(buf, ":%s", args[0][i-1])
 		return nil
 	})
 }

@@ -19,6 +19,13 @@ func TestDollar(t *testing.T) {
 	assert.Equal(t, "x = $1 AND y = $2", s)
 }
 
+func TestNamed(t *testing.T) {
+	sql := "x = ? AND y = ?"
+	s, e := Named.ReplacePlaceholders(sql, []string{"x", "y"})
+	assert.Nil(t, e)
+	assert.Equal(t, "x = :x AND y = :y", s)
+}
+
 func TestPlaceholders(t *testing.T) {
 	assert.Equal(t, Placeholders(2), "?,?")
 }

@@ -96,7 +96,6 @@ func TestSelectBuilderZeroOffsetLimit(t *testing.T) {
 	assert.Equal(t, expectedSql, sql)
 }
 
-
 func TestSelectBuilderFromSelect(t *testing.T) {
 	subQ := Select("c").From("d").Where(Eq{"i": 0})
 	b := Select("a", "b").FromSelect(subQ, "subq")
@@ -118,11 +117,21 @@ func TestSelectBuilderToSqlErr(t *testing.T) {
 func TestSelectBuilderPlaceholders(t *testing.T) {
 	b := Select("test").Where("x = ? AND y = ?")
 
-	sql, _, _ := b.PlaceholderFormat(Question).ToSql()
+	sql, _, e := b.PlaceholderFormat(Question).ToSql()
+	assert.Nil(t, e)
 	assert.Equal(t, "SELECT test WHERE x = ? AND y = ?", sql)
 
-	sql, _, _ = b.PlaceholderFormat(Dollar).ToSql()
+	sql, _, e = b.PlaceholderFormat(Dollar).ToSql()
+	assert.Nil(t, e)
 	assert.Equal(t, "SELECT test WHERE x = $1 AND y = $2", sql)
+
+	sql, _, e = b.PlaceholderFormat(Named).ToSql()
+	assert.NotNil(t, e)
+
+	b = Select("test").Where("x = :x AND y = :y")
+	sql, _, e = b.PlaceholderFormat(Named).ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, "SELECT test WHERE x = :x AND y = :y", sql)
 }
 
 func TestSelectBuilderRunners(t *testing.T) {
