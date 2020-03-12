@@ -105,6 +105,15 @@ func TestUpdateBuilderPlaceholders(t *testing.T) {
 	assert.Equal(t, "UPDATE test SET x = $1, y = $2", sql)
 }
 
+func TestUpdateEmptyValsNamedPlaceholder(t *testing.T) {
+	b := Update("test").Columns("a", "b", "c").
+		AllowEmptyVals().PlaceholderFormat(Named)
+
+	sql, _, e := b.PlaceholderFormat(Named).ToSql()
+	assert.Nil(t, e)
+	assert.Equal(t, "UPDATE test SET a = :a, b = :b, c = :c", sql)
+}
+
 func TestUpdateBuilderMultipleSets(t *testing.T) {
 	s, a, _ := Update("t").Set("a", 1).Set("b", 2).ToSql()
 

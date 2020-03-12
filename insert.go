@@ -20,7 +20,7 @@ type InsertBuilder struct {
 	options  []string
 	into     string
 	columns  []string
-	values   [][]interface{}
+	rows     [][]interface{}
 	suffixes exprs
 	iselect  *SelectBuilder
 }
@@ -103,7 +103,8 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		err = fmt.Errorf("insert statements must specify a table")
 		return
 	}
-	if !b.emptyok && len(b.values) == 0 && b.iselect == nil {
+
+	if b.failEmpty() && b.iselect == nil {
 		err = fmt.Errorf("insert statements must have at least one set of values or select clause")
 		return
 	}
@@ -115,21 +116,20 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 		sql.WriteString(" ")
 	}
 
-	sql.WriteString("INSERT ")
+	sql.WriteString("INSERT")
 
 	if len(b.options) > 0 {
-		sql.WriteString(strings.Join(b.options, " "))
 		sql.WriteString(" ")
+		sql.WriteString(strings.Join(b.options, " "))
 	}
 
-	sql.WriteString("INTO ")
+	sql.WriteString(" INTO ")
 	sql.WriteString(b.into)
-	sql.WriteString(" ")
 
 	if len(b.columns) > 0 {
-		sql.WriteString("(")
+		sql.WriteString(" (")
 		sql.WriteString(strings.Join(b.columns, ","))
-		sql.WriteString(") ")
+		sql.WriteString(")")
 	}
 
 	if b.iselect != nil {
@@ -157,45 +157,89 @@ func (b *InsertBuilder) ToSql() (sqlStr string, args []interface{}, err error) {
 	return
 }
 
+func (b *InsertBuilder) failEmpty() bool {
+	return !b.emptyok && len(b.rows) == 0
+}
+
 func (b *InsertBuilder) appendValuesToSQL(w io.Writer, args []interface{}) ([]interface{}, error) {
-	if !b.emptyok && len(b.values) == 0 {
+	if b.failEmpty() {
 		return args, errors.New("values for insert statements are not set")
 	}
 
-	io.WriteString(w, "VALUES ")
-
-	valuesStrings := make([]string, len(b.values))
-	for r, row := range b.values {
-		valueStrings := make([]string, len(row))
-		for v, val := range row {
-
-			switch typedVal := val.(type) {
-			case expr:
-				valueStrings[v] = typedVal.sql
-				args = append(args, typedVal.args...)
-			case Sqlizer:
-				var valSql string
-				var valArgs []interface{}
-				var err error
-
-				valSql, valArgs, err = typedVal.ToSql()
-				if err != nil {
-					return nil, err
-				}
-
-				valueStrings[v] = valSql
-				args = append(args, valArgs...)
-			default:
-				valueStrings[v] = "?"
-				args = append(args, val)
-			}
-		}
-		valuesStrings[r] = fmt.Sprintf("(%s)", strings.Join(valueStrings, ","))
+	rCount := len(b.rows)
+	if rCount == 0 && len(b.columns) > 0 {
+		rCount = 1
+	}
+	if rCount == 0 {
+		return args, nil
 	}
 
-	io.WriteString(w, strings.Join(valuesStrings, ","))
+	cCount := len(b.columns)
+	if len(b.rows) > 0 && len(b.rows[0]) > cCount {
+		cCount = len(b.rows[0])
+	}
+
+	io.WriteString(w, " VALUES ")
+
+	rowsStrings := make([]string, rCount)
+	for r := 0; r < rCount; r++ {
+		valuesStrings := make([]string, cCount)
+
+		for v := 0; v < cCount; v++ {
+			if r >= len(b.rows) {
+				b.fillPlaceholders(0, &valuesStrings)
+				break
+			}
+
+			row := b.rows[r]
+			if v >= len(row) {
+				b.fillPlaceholders(v, &valuesStrings)
+				break
+			}
+
+			sql, err := b.buildValueString(row[v], &args)
+			if err != nil {
+				return args, err
+			}
+			valuesStrings[v] = sql
+
+		}
+		rowsStrings[r] = fmt.Sprintf("(%s)", strings.Join(valuesStrings, ","))
+	}
+
+	io.WriteString(w, strings.Join(rowsStrings, ","))
 
 	return args, nil
+}
+
+func (b *InsertBuilder) fillPlaceholders(start int, arr *[]string) {
+	for i := start; i < len((*arr)); i++ {
+		(*arr)[i] = "?"
+	}
+}
+
+func (b *InsertBuilder) buildValueString(val interface{}, args *[]interface{}) (sql string, err error) {
+	var a []interface{}
+
+	switch typedVal := val.(type) {
+
+	case expr:
+		sql = typedVal.sql
+		a = typedVal.args
+
+	case Sqlizer:
+		sql, a, err = typedVal.ToSql()
+		if err != nil {
+			return
+		}
+
+	default:
+		sql = "?"
+		a = []interface{}{val}
+	}
+
+	(*args) = append((*args), a...)
+	return
 }
 
 func (b *InsertBuilder) appendSelectToSQL(w io.Writer, args []interface{}) ([]interface{}, error) {
@@ -208,6 +252,7 @@ func (b *InsertBuilder) appendSelectToSQL(w io.Writer, args []interface{}) ([]in
 		return args, err
 	}
 
+	io.WriteString(w, " ")
 	io.WriteString(w, selectClause)
 	args = append(args, sArgs...)
 
@@ -240,14 +285,8 @@ func (b *InsertBuilder) Columns(columns ...string) *InsertBuilder {
 
 // Values adds a single row's values to the query.
 func (b *InsertBuilder) Values(values ...interface{}) *InsertBuilder {
-	b.values = append(b.values, values)
+	b.rows = append(b.rows, values)
 	return b
-}
-
-// NamedValues sets placeHolderFormat to Named and adds a single row's values to the query.
-func (b *InsertBuilder) NamedValues(values ...interface{}) *InsertBuilder {
-	b.placeholderFormat = Named
-	return b.Values(values...)
 }
 
 // Returning adds columns to RETURNING clause of the query
@@ -285,7 +324,7 @@ func (b *InsertBuilder) SetMap(clauses map[string]interface{}) *InsertBuilder {
 	}
 
 	b.columns = cols
-	b.values = [][]interface{}{vals}
+	b.rows = [][]interface{}{vals}
 	return b
 }
 

@@ -46,12 +46,12 @@ func (_ dollarFormat) ReplacePlaceholders(sql string, _ ...[]string) (string, er
 
 type namedFormat struct{}
 
-func (_ namedFormat) ReplacePlaceholders(sql string, args ...[]string) (string, error) {
+func (_ namedFormat) ReplacePlaceholders(sql string, cols ...[]string) (string, error) {
 	return replacePlaceholders(sql, func(buf *bytes.Buffer, i int) error {
-		if len(args) == 0 || i-1 >= len(args[0]) {
+		if len(cols) == 0 || i-1 >= len(cols[0]) {
 			return errors.New("unable to determine placeholder name")
 		}
-		fmt.Fprintf(buf, ":%s", args[0][i-1])
+		fmt.Fprintf(buf, ":%s", cols[0][i-1])
 		return nil
 	})
 }

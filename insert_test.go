@@ -30,18 +30,6 @@ func TestInsertBuilderToSql(t *testing.T) {
 	assert.Equal(t, expectedArgs, args)
 }
 
-func TestInsertNamedValues(t *testing.T) {
-	b := Insert("t").
-		Columns("a", "b").
-		NamedValues(1, 1)
-
-	sql, args, err := b.ToSql()
-	assert.NoError(t, err)
-
-	assert.Equal(t, "INSERT INTO t (a,b) VALUES (:a,:b)", sql)
-	assert.Equal(t, []interface{}{1, 1}, args)
-}
-
 func TestInsertBuilderToSqlErr(t *testing.T) {
 	_, _, err := Insert("").Values(1).ToSql()
 	assert.Error(t, err)
@@ -70,12 +58,27 @@ func TestInsertBuilderPlaceholders(t *testing.T) {
 	assert.Equal(t, "INSERT INTO test (a,b) VALUES (:a,:b)", sql)
 }
 
-func TestInsertAllowEmptyVals(t *testing.T) {
+func TestInsertBuilderAllowEmptyVals(t *testing.T) {
 	_, _, e := Insert("t").ToSql()
 	assert.Error(t, e)
 
-	_, _, e = Insert("t").AllowEmptyVals().ToSql()
-	assert.Nil(t, e)
+	sb := StatementBuilder.AllowEmptyVals()
+
+	sql, _, e := sb.Insert("t").AllowEmptyVals().ToSql()
+	assert.NoError(t, e)
+	assert.Equal(t, "INSERT INTO t", sql)
+
+	sql, _, e = sb.Insert("t").Columns("a", "b").ToSql()
+	assert.NoError(t, e)
+	assert.Equal(t, "INSERT INTO t (a,b) VALUES (?,?)", sql)
+
+	sql, _, e = sb.Insert("t").Columns("s", "a", "b").Values(Expr("? + 1")).ToSql()
+	assert.NoError(t, e)
+	assert.Equal(t, "INSERT INTO t (s,a,b) VALUES (? + 1,?,?)", sql)
+
+	sql, _, e = sb.Insert("t").Columns("a", "b").PlaceholderFormat(Named).ToSql()
+	assert.NoError(t, e)
+	assert.Equal(t, "INSERT INTO t (a,b) VALUES (:a,:b)", sql)
 }
 
 func TestInsertBuilderReturning(t *testing.T) {
@@ -159,6 +162,18 @@ func TestInsertBuilderSetMap(t *testing.T) {
 
 	expectedArgs := []interface{}{1}
 	assert.Equal(t, expectedArgs, args)
+}
+
+func TestInsertBuilderMultiRow(t *testing.T) {
+	b := Insert("t").
+		Values(1, 2).
+		Values(3, 4).
+		Values(5, 6)
+
+	sql, args, err := b.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, []interface{}{1, 2, 3, 4, 5, 6}, args)
+	assert.Equal(t, "INSERT INTO t VALUES (?,?),(?,?),(?,?)", sql)
 }
 
 func TestInsertBuilderSelect(t *testing.T) {
